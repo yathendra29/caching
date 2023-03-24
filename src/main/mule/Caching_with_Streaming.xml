@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<flow name="Caching_with_Streaming_Non_Repeatable(caching_wouldn't_apply)" doc:id="58365873-c1ec-4ba4-89e6-31c8ce6a7dac" >
+		<http:listener doc:name="Listener" doc:id="0851391d-f2fb-451d-9773-6311c44dc8ab" config-ref="HTTP_Listener_config" path="/cs">
+			<non-repeatable-stream />
+		</http:listener>
+		<logger level="INFO" doc:name="Logger" doc:id="d560e920-edef-4202-9e1b-4000c0e55fe3" message="Request Recieved"/>
+		<ee:cache doc:name="Cache" doc:id="2ead4012-bbb5-4fcf-acb6-064762a55692" >
+			<logger level="INFO" doc:name="Logger" doc:id="0b938123-f18a-4c9f-8c7b-0fdbb0e18e71" message="Cache start"/>
+			<ee:transform doc:name="Transform Message" doc:id="5d8cc020-8a45-4a4f-8de2-9730db1810fe" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+"Hello World"]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+			<logger level="INFO" doc:name="Logger" doc:id="767fc261-d97d-4e6a-9d47-139c8bf98bc7" message="Cache end"/>
+		</ee:cache>
+		<logger level="INFO" doc:name="Logger" doc:id="e47c3941-786f-4253-a342-c8fbca7033f6" message="Response sent"/>
+	</flow>
+	<flow name="Caching_with_Streaming_Repeatable(caching_will_apply)" doc:id="6b5c1a52-af30-4634-9fd6-dd86d4b1b6cc" >
+		<http:listener doc:name="Listener" doc:id="6adfb7f2-8d11-4b2a-98c3-840b2048799d" config-ref="HTTP_Listener_config" path="/cs1">
+			<repeatable-in-memory-stream />
+		
+</http:listener>
+		<logger level="INFO" doc:name="Logger" doc:id="76503cf2-ff6e-463e-b54f-6a0df10a243f" message="Request Recieved"/>
+		<ee:cache doc:name="Cache" doc:id="be397b29-70a0-4163-b588-ad7370964125" >
+			<logger level="INFO" doc:name="Logger" doc:id="1cf4f520-4c6c-4fbf-aad1-725ed9eb5213" message="Cache start"/>
+			<ee:transform doc:name="Transform Message" doc:id="46ea9db6-3720-4b29-a8e7-11059ccc71a2" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+"Hello World"]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+			<logger level="INFO" doc:name="Logger" doc:id="e141a577-2f82-441d-8fa2-dd55d5ea6d4d" message="Cache end"/>
+		</ee:cache>
+		<logger level="INFO" doc:name="Logger" doc:id="42b76e0f-055b-497c-961e-8f39a1cc364b" message="Response sent"/>
+	</flow>
+</mule>

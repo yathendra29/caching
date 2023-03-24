@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="7f93899e-5348-4ef3-b42c-f30524cc46a1" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="aa1e9cf6-b98a-49ca-bff8-2f048acede7d" >
+		<db:my-sql-connection host="localhost" port="3306" user="root" password="Raghava$777" database="myfirstdb" />
+	</db:config>
+	<ee:object-store-caching-strategy name="Caching_Strategy" doc:name="Caching Strategy" doc:id="9a47db86-62ff-4659-9859-f791031fc343" keyGenerationExpression="#[vars.queryParams]" />
+	<flow name="caching_using_default_strategy" doc:id="de4986aa-d31c-420b-9beb-e865f715e5ec" >
+		<http:listener doc:name="Listener" doc:id="a310d6e3-cff4-47dd-ac0c-2613823322df" config-ref="HTTP_Listener_config" path="/cache"/>
+		<set-variable value="#[payload.std_id]" doc:name="Set Variable" doc:id="e0f67e9e-33cf-4a59-9bd7-b4bbec6870b6" variableName="stdid"/>
+		<ee:transform doc:name="explination" doc:id="e02a9262-c750-4007-b126-53b3416a43e2" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+"cache will stop the repeated data means 
+ if we fetch deails from id=402,again if you try cache wont allow"]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<ee:cache doc:name="Cache" doc:id="9bcd6a47-a9d6-4bf1-b6a5-820af5fa7a11" filterExpression="#[vars.stdid &gt; 400]">
+			<db:select doc:name="Select" doc:id="9142707d-ab33-468a-8477-b2365545a18a" config-ref="Database_Config">
+			<db:sql><![CDATA[select name from myfirstdb.studentdetails where std_id =:id]]></db:sql>
+			<db:input-parameters><![CDATA[#[{"id":vars.stdid}]]]></db:input-parameters>
+		</db:select>
+			<logger level="INFO" doc:name="Logger" doc:id="e814e9e4-a77b-4143-8ec0-3c5d7359beec" message="#[payload[0]]" />
+		</ee:cache>
+		<ee:transform doc:name="Transform Message" doc:id="9c296a36-fc00-4ad3-a0e3-70a280810407" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload[0].name]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="caching-reference_to_a_strategy" doc:id="c8c0e124-cdd0-4b16-bfbd-71715b51e3f4" >
+		<http:listener doc:name="Listener" doc:id="760a7b46-5116-4a22-80c2-0fce25ffd807" config-ref="HTTP_Listener_config" path="/cache1/{empID}"/>
+		<logger level="INFO" doc:name="Logger" doc:id="eb0ea3ac-7c02-47a2-aae0-f053ad97b50c" message="before cache"/>
+		<ee:cache doc:name="Cache" doc:id="817f9e34-7dfc-4ba4-9052-651c7e9d4b44" cachingStrategy-ref="Caching_Strategy">
+			<logger level="INFO" doc:name="Logger" doc:id="d8d41ee1-0646-4867-addc-5960c8b4f0d2" message="cache started"/>
+			<http:request method="GET" doc:name="Request" doc:id="0adc8929-7875-4de9-b03f-a20ca5abfee2" url="https://reqres.in/api/users/{userID}">
+				<http:uri-params ><![CDATA[#[{
+	"userID":attributes.uriParams.empID
+}]]]></http:uri-params>
+			</http:request>
+			<logger level="INFO" doc:name="Logger" doc:id="80c66136-650e-4dbb-a12d-d1f5e684557d" message="cache ended"/>
+		</ee:cache>
+		<logger level="INFO" doc:name="Logger" doc:id="85310b09-52a5-4133-a9e3-f5d2b3af8112" message="completed"/>
+		<ee:transform doc:name="Transform Message" doc:id="8727ee5c-95c4-4675-98f5-9e9c3352daa0" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload.data]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="Handling_Duplicate_Requests" doc:id="8718f17c-7afb-4df3-a6af-ea113b4a2564" >
+		<http:listener doc:name="Listener" doc:id="f39b1ece-2485-4749-9ee9-1018a4a296b2" config-ref="HTTP_Listener_config" path="/hdp"/>
+		<set-variable value="#[attributes.queryParams.id]" doc:name="Set Variable" doc:id="76f25fb2-7eb0-4faa-8f4d-692e31d19208" variableName="queryParams"/>
+		<ee:cache doc:name="Cache" doc:id="5f5a4fca-a3f0-4ed3-b093-204cb3d9d87c" cachingStrategy-ref="Caching_Strategy">
+			<http:request method="GET" doc:name="Request" doc:id="f9d08e3c-8c77-44df-bc5d-db63d2eb9362" url="https://reqres.in/api/users"/>
+			<set-variable value="#[payload]" doc:name="Set Variable" doc:id="b3271d9a-dd8e-49af-9b62-7a622110789a" variableName="cache"/>
+			<logger level="INFO" doc:name="Logger" doc:id="9c9c847d-8275-4575-9fc1-dbf211a7098b" message="#[payload]"/>
+		</ee:cache>
+		<ee:transform doc:name="Transform Message" doc:id="832088c7-c879-4ecd-a473-8a4dc72f85f6" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+if((vars.cache)!=null){
+	"status":"success",
+	"result":payload
+}
+else
+{
+	"status":"Failure",
+	"error":"User already exists"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	
+</mule>
